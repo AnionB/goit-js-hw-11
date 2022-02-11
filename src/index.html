@@ -14,12 +14,12 @@
   <body>
     <form class="search-form" id="search-form">
       <input type="text" name="searchQuery" autocomplete="off" placeholder="Search images..." />
-      <button type="submit">Search</button>
+      <button type="submit"><img src="./images/icons.svg" alt="" height="30px" /></button>
     </form>
-    <!-- Так добавляются фрагменты в главные HTML-файлы страниц. -->
-    <include src="./partials/example.html"></include>
+    <div class="gallery"></div>
 
-    <!-- Скрипт идёт последним в разметке. В нём уже подключен главный SASS-файл. -->
+    <button type="button" class="load-more visually-hidden">Load more</button>
+
     <script src="./index.js"></script>
   </body>
 </html>
