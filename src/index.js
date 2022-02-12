@@ -1,11 +1,11 @@
 import './sass/main.scss';
-
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import { getPictures, makeUrl } from './getPicture';
 import { makeMarkup, getItemHTML } from './makeMarkup';
 import InfiniteScroll from 'infinite-scroll';
+
 const refs = {
   form: document.querySelector('.search-form'),
   pictures: document.querySelector('.gallery'),
@@ -13,7 +13,7 @@ const refs = {
   loadMoreBtn: document.querySelector('.load-more'),
   checkbox: document.querySelector('checkbox'),
 };
-
+const lightbox = new SimpleLightbox('.gallery a ');
 let currentPage = 1;
 let searchQuery = '';
 
@@ -78,16 +78,16 @@ async function makeGallary(searchQuery) {
 function renderPictures(pictureArray) {
   const markup = makeMarkup(pictureArray);
   refs.pictures.insertAdjacentHTML('beforeend', markup);
-  const lightbox = new SimpleLightbox('.gallery a ');
+
   lightbox.refresh();
 }
 
 ////////////// InfiniteScroll
 
 function infiniteScroll() {
-  refs.form.elements.infiniteScroll.addEventListener('change', test);
+  refs.form.elements.infiniteScroll.addEventListener('change', onCheckbox);
 
-  function test(evt) {
+  function onCheckbox(evt) {
     if (!evt.currentTarget.checked) {
       infScroll.destroy();
     }
@@ -95,6 +95,7 @@ function infiniteScroll() {
 
   let infScroll = new InfiniteScroll(refs.pictures, {
     path: function () {
+      currentPage = this.pageIndex;
       return makeUrl(searchQuery, this.pageIndex);
     },
 
@@ -109,12 +110,26 @@ function infiniteScroll() {
 
   infScroll.loadNextPage();
 
+  infScroll.once('load', function (body) {
+    Notify.success(`Hooray! We found ${body.totalHits} images.`);
+  });
+
   infScroll.on('load', function (body) {
     // compile body data into HTML
+    if (body.hits.length === 0) {
+      Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+      return;
+    }
+    if ((currentPage - 1) * 40 > body.totalHits) {
+      infScroll.infScroll.destroy();
+      Notify.failure("We're sorry, but you've reached the end of search results.");
+      return;
+    }
     var itemsHTML = body.hits.map(getItemHTML).join('');
     // convert HTML string into elements
     proxyElem.innerHTML = itemsHTML;
     // append item elements
     refs.pictures.append(...proxyElem.children);
+    lightbox.refresh();
   });
 }
