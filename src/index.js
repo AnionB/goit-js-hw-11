@@ -90,6 +90,7 @@ function infiniteScroll() {
   function onCheckbox(evt) {
     if (!evt.currentTarget.checked) {
       infScroll.destroy();
+      refs.loadMoreBtn.classList.remove('visually-hidden');
     }
   }
 
@@ -111,7 +112,9 @@ function infiniteScroll() {
   infScroll.loadNextPage();
 
   infScroll.once('load', function (body) {
-    Notify.success(`Hooray! We found ${body.totalHits} images.`);
+    if (body.totalHits > 0) {
+      Notify.success(`Hooray! We found ${body.totalHits} images.`);
+    }
   });
 
   infScroll.on('load', function (body) {
@@ -121,7 +124,7 @@ function infiniteScroll() {
       return;
     }
     if ((currentPage - 1) * 40 > body.totalHits) {
-      infScroll.infScroll.destroy();
+      infScroll.destroy();
       Notify.failure("We're sorry, but you've reached the end of search results.");
       return;
     }
