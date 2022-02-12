@@ -3,24 +3,17 @@ import './sass/main.scss';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
-import getPictures from './getPicture';
-import makeMarkup from './makeMarkup';
-
+import { getPictures, makeUrl } from './getPicture';
+import { makeMarkup, getItemHTML } from './makeMarkup';
+import InfiniteScroll from 'infinite-scroll';
 const refs = {
   form: document.querySelector('.search-form'),
   pictures: document.querySelector('.gallery'),
+  photoCard: document.querySelector('.photo-card'),
   loadMoreBtn: document.querySelector('.load-more'),
+  checkbox: document.querySelector('checkbox'),
 };
-//////////////
-// const { height: cardHeight } = document
-//   .querySelector('.gallery')
-//   .firstElementChild.getBoundingClientRect();
 
-// window.scrollBy({
-//   top: cardHeight * 2,
-//   behavior: 'smooth',
-// });
-////////////////
 let currentPage = 1;
 let searchQuery = '';
 
@@ -29,23 +22,30 @@ refs.loadMoreBtn.addEventListener('click', onClick);
 
 function onSubscribe(evt) {
   evt.preventDefault();
+  const useInfiniteScroll = refs.form.elements.infiniteScroll.checked;
   searchQuery = evt.currentTarget.elements.searchQuery.value.trim();
   if (!searchQuery) {
     return;
   }
   refs.pictures.innerHTML = '';
   currentPage = 1;
-  makeGallary(searchQuery)
-    .then(totalHits => {
-      Notify.success(`Hooray! We found ${totalHits} images.`);
-      if (totalHits > 40) {
-        refs.loadMoreBtn.classList.remove('visually-hidden');
-      }
-    })
-    .catch(error => error);
+  if (useInfiniteScroll) {
+    infiniteScroll();
+    refs.loadMoreBtn.classList.add('visually-hidden');
+  } else {
+    makeGallary(searchQuery)
+      .then(totalHits => {
+        Notify.success(`Hooray! We found ${totalHits} images.`);
+        if (totalHits > 40) {
+          refs.loadMoreBtn.classList.remove('visually-hidden');
+        } else {
+          refs.loadMoreBtn.classList.add('visually-hidden');
+        }
+      })
+      .catch(error => error);
+  }
 }
 function onClick(evt) {
-  console.log(currentPage);
   makeGallary(searchQuery).then(totalHits => {
     const { height: cardHeight } = document
       .querySelector('.gallery')
@@ -56,7 +56,6 @@ function onClick(evt) {
       behavior: 'smooth',
     });
     if ((currentPage - 1) * 40 > totalHits) {
-      console.log('perebor');
       refs.loadMoreBtn.classList.add('visually-hidden');
       Notify.failure("We're sorry, but you've reached the end of search results.");
     }
@@ -65,7 +64,6 @@ function onClick(evt) {
 
 async function makeGallary(searchQuery) {
   const pictures = await getPictures(searchQuery, currentPage);
-  console.log('🚀 ~ pictures after', pictures);
 
   if (pictures.hits.length === 0) {
     throw Notify.failure(
@@ -82,4 +80,41 @@ function renderPictures(pictureArray) {
   refs.pictures.insertAdjacentHTML('beforeend', markup);
   const lightbox = new SimpleLightbox('.gallery a ');
   lightbox.refresh();
+}
+
+////////////// InfiniteScroll
+
+function infiniteScroll() {
+  refs.form.elements.infiniteScroll.addEventListener('change', test);
+
+  function test(evt) {
+    if (!evt.currentTarget.checked) {
+      infScroll.destroy();
+    }
+  }
+
+  let infScroll = new InfiniteScroll(refs.pictures, {
+    path: function () {
+      return makeUrl(searchQuery, this.pageIndex);
+    },
+
+    responseBody: 'json',
+    status: '.scroll-status',
+    history: false,
+    checkLastPage: true,
+  });
+
+  // use element to turn HTML string into elements
+  let proxyElem = document.createElement('div');
+
+  infScroll.loadNextPage();
+
+  infScroll.on('load', function (body) {
+    // compile body data into HTML
+    var itemsHTML = body.hits.map(getItemHTML).join('');
+    // convert HTML string into elements
+    proxyElem.innerHTML = itemsHTML;
+    // append item elements
+    refs.pictures.append(...proxyElem.children);
+  });
 }

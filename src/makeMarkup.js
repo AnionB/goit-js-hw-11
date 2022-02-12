@@ -1,7 +1,11 @@
-export default function makeMarkup(picturesArray) {
-  const picturesMarkup = picturesArray
-    .map(
-      picture => `<div class="photo-card">
+export { makeMarkup, getItemHTML };
+function makeMarkup(picturesArray) {
+  const picturesMarkup = picturesArray.map(picture => getItemHTML(picture)).join('');
+  return picturesMarkup;
+}
+
+function getItemHTML(picture) {
+  return `<div class="photo-card">
        <a href="${picture.largeImageURL}">
     <img src="${picture.webformatURL}" alt="${picture.tags}" loading="lazy" /></a>
     <div class="info">
@@ -22,8 +26,5 @@ export default function makeMarkup(picturesArray) {
         ${picture.downloads}
       </p>
     </div>
-  </div>`,
-    )
-    .join('');
-  return picturesMarkup;
+  </div>`;
 }
